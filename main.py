@@ -8,6 +8,19 @@ RPC_URL = "https://sepolia.drpc.org"
 # Bağlantıyı oluştur
 web3 = Web3(Web3.HTTPProvider(RPC_URL))
 
+# Contract adresi ve ABI
+CONTRACT_ADDRESS = "0x3E2e3F4F24eDdD9d6968B7b88F1Bf408FC9fEFd6"
+CONTRACT_ABI = [
+    {
+        "inputs": [],
+        "name": "depositEth",
+        "outputs": [],
+        "stateMutability": "payable",
+        "type": "function",
+    }
+]
+contract = web3.eth.contract(address=CONTRACT_ADDRESS, abi=CONTRACT_ABI)
+
 def load_wallets(file_path):
     """Cüzdan adreslerini ve private key'leri bir dosyadan yükler."""
     wallets = []
@@ -42,43 +55,42 @@ def get_amount_from_user(prompt):
         except ValueError:
             print("Geçersiz değer. Lütfen geçerli bir ETH miktarı girin.")
 
-def send_eth_to_wallets(main_wallet, main_private_key, wallets, amount_in_wei):
-    """Ana cüzdandan diğer cüzdanlara ETH gönderir."""
+def tx_loop(wallets, eth_amount):
+    """TX Kas işlemi için döngü."""
+    print("TX işlemi başlatılıyor...")
+    # İlk wallet'ı kullanıyoruz
+    main_wallet, main_private_key = wallets[0]
+
+    # Deposit işlemi yapmak için kontrata ETH gönderiyoruz
     for wallet_address, _ in wallets:
         try:
             # Transaction oluştur
-            transaction = {
+            transaction = contract.functions.depositEth().build_transaction({
                 'from': main_wallet,
-                'to': wallet_address,
-                'value': amount_in_wei,
-                'gas': 21000,
-                'gasPrice': web3.to_wei(10, 'gwei'),
-                'nonce': web3.eth.get_transaction_count(main_wallet),
+                'value': eth_amount,  # Gönderilecek ETH
+                'gas': 200000,        # Gas limiti (ayarlanabilir)
+                'gasPrice': web3.to_wei(10, 'gwei'),  # Gas fiyatı
+                'nonce': web3.eth.get_transaction_count(main_wallet),  # Nonce değeri
                 'chainId': 11155111  # Sepolia Testnet için EIP-155 Chain ID
-            }
+            })
 
             # İşlemi imzala
             signed_txn = web3.eth.account.sign_transaction(transaction, private_key=main_private_key)
 
             # İşlemi gönder
             tx_hash = web3.eth.send_raw_transaction(signed_txn.raw_transaction)
-            print(f"[{main_wallet}] {wallet_address} adresine ETH gönderildi. Hash: {web3.to_hex(tx_hash)}")
+            print(f"Transaction gönderildi. Hash: {web3.to_hex(tx_hash)}")
 
             # İşlemi doğrula
             receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
-            print(f"[{wallet_address}] Transaction onaylandı. Hash: {web3.to_hex(tx_hash)}")
+            print(f"Transaction onaylandı. Hash: {web3.to_hex(tx_hash)}")
         except Exception as e:
-            print(f"[{main_wallet}] {wallet_address} adresine ETH gönderirken hata oluştu: {e}")
+            print(f"Contract'a ETH gönderirken hata oluştu: {e}")
         
         # Her işlemden sonra 5 ile 12 saniye arasında rastgele bekle
         wait_time = random.uniform(5, 12)
         print(f"Bir sonraki gönderim için {wait_time:.2f} saniye bekleniyor...\n")
         time.sleep(wait_time)  # Rastgele bekleme süresi
-
-def tx_loop(wallets, eth_amount):
-    """TX Kas işlemi için döngü."""
-    print("TX işlemi başlatılıyor...")
-    send_eth_to_wallets(wallets[0][0], wallets[0][1], wallets, eth_amount)  # İlk wallet'ı kullanıyoruz
 
 def main_menu():
     """Ana menü arayüzü."""
@@ -100,12 +112,7 @@ def main_menu():
 
         choice = input("Bir seçim yapın (1-3): ")
         if choice == "1":
-            if web3.is_connected():
-                print("Cüzdanlara ETH gönderme işlemi başlatılıyor...")
-                eth_amount = get_amount_from_user("Cüzdanlara göndereceğiniz ETH miktarını girin: ")
-                send_eth_to_wallets(main_wallet, main_private_key, wallets, eth_amount)
-            else:
-                print("Blockchain'e bağlanılamadı.")
+            print("Cüzdanlara ETH gönderme işlemi henüz yapılandırılmadı.")
         elif choice == "2":
             if web3.is_connected():
                 print("TX Kas işlemi başlatılıyor...")
