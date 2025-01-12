@@ -1,0 +1,2 @@
+WalletAdress1,WalletprivKey1
+WalletAdress2,WalletprivKey2
