@@ -33,7 +33,7 @@ Botu çalıştırmadan önce aşağıdaki adımları takip edin:
 
    Windows:
    ```bash
-   .env\Scriptsctivate
+   .\venv\Scripts\activate
    ```
 
    Linux/MacOS:
