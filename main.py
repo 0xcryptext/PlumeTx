@@ -95,7 +95,7 @@ def main_menu():
     while True:
         print("\n--- Bot Menüsü ---")
         print("1. Cüzdanlara ETH Gönder")
-        print("2. TX Kas (Mevcut İşlev)")
+        print("2. TX Kas")
         print("3. Çıkış")
 
         choice = input("Bir seçim yapın (1-3): ")
